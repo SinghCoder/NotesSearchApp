@@ -2,21 +2,24 @@ import { observer, useLocalObservable } from "mobx-react";
 import * as React from "react";
 import { Database } from "sql.js";
 import {
-  authorsSearch,
+  notesSearch,
   createDbWorker,
-  getForAuthor,
-  SponsorInfo,
+  // getForAuthor,
+  // SponsorInfo,
   SqliteWorker,
-  VideoMeta,
+  Note,
+  Tag,
+  tagsSearch
+  // VideoMeta,
 } from "./db";
 import { action, makeAutoObservable, makeObservable, observable } from "mobx";
 import AsyncSelect from "react-select/async";
 import debounce from "debounce-promise";
-import createPlotlyComponent from "react-plotly.js/factory";
-import Plotly from "plotly.js/lib/core";
+// import createPlotlyComponent from "react-plotly.js/factory";
+// import Plotly from "plotly.js/lib/core";
 import { textChangeRangeIsUnchanged } from "typescript";
 
-const Plot = createPlotlyComponent(Plotly);
+// const Plot = createPlotlyComponent(Plotly);
 
 function formatDuration(sec_num: number) {
   const hours = Math.floor(sec_num / 3600);
@@ -31,47 +34,47 @@ function formatDuration(sec_num: number) {
     String(seconds).padStart(2, "0")
   );
 }
-const SponsorPlot: React.FC<{
-  data: SponsorInfo[];
-  onHover: (m: SponsorInfo) => void;
-}> = observer((p) => {
-  return (
-    <Plot
-      style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}
-      onClick={(e) => {
-        console.log("hover", e);
-        const element = p.data[e.points[0].pointIndex];
-        if (element) p.onHover(element);
-      }}
-      data={[
-        {
-          x: p.data.map((e) => new Date(e.meta.published * 1000)),
-          y: p.data.map((e) => e.percentSponsor / 100),
+// const SponsorPlot: React.FC<{
+//   data: SponsorInfo[];
+//   onHover: (m: SponsorInfo) => void;
+// }> = observer((p) => {
+//   return (
+//     <Plot
+//       style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}
+//       onClick={(e) => {
+//         console.log("hover", e);
+//         const element = p.data[e.points[0].pointIndex];
+//         if (element) p.onHover(element);
+//       }}
+//       data={[
+//         {
+//           x: p.data.map((e) => new Date(e.meta.published * 1000)),
+//           y: p.data.map((e) => e.percentSponsor / 100),
 
-          text: p.data.map(
-            (e) =>
-              `<b>${e.meta.title}</b><br>
-              published ${new Date(
-                e.meta.published * 1000
-              ).toLocaleDateString()}<br>
-              Length: ${formatDuration(e.meta.lengthSeconds)}<br>
-              Sponsor duration: ${formatDuration(
-                e.durationSponsor
-              )} (<b>${e.percentSponsor.toFixed(0)}%</b>)`
-          ),
-          hovertemplate: "%{text}",
-          type: "scatter",
-          mode: "markers",
-        },
-      ]}
-      layout={{
-        autosize: true,
-        yaxis: { tickformat: ",.0%", title: "Part that is Sponsorship" },
-        xaxis: { title: "Upload date" },
-      }}
-    />
-  );
-});
+//           text: p.data.map(
+//             (e) =>
+//               `<b>${e.meta.title}</b><br>
+//               published ${new Date(
+//                 e.meta.published * 1000
+//               ).toLocaleDateString()}<br>
+//               Length: ${formatDuration(e.meta.lengthSeconds)}<br>
+//               Sponsor duration: ${formatDuration(
+//                 e.durationSponsor
+//               )} (<b>${e.percentSponsor.toFixed(0)}%</b>)`
+//           ),
+//           hovertemplate: "%{text}",
+//           type: "scatter",
+//           mode: "markers",
+//         },
+//       ]}
+//       layout={{
+//         autosize: true,
+//         yaxis: { tickformat: ",.0%", title: "Part that is Sponsorship" },
+//         xaxis: { title: "Upload date" },
+//       }}
+//     />
+//   );
+// });
 
 type SqliteStats = {
   filename: string;
@@ -102,30 +105,30 @@ const SqliteStats: React.FC<{
   );
 });
 
-const VideoMetaDisplay: React.FC<{ video: SponsorInfo }> = observer(
-  ({ video }) => {
-    return (
-      <div>
-        <a href={`https://youtube.com/watch?v=${video.meta.videoID}`}>
-          <img
-            src={video.meta.maxresdefault_thumbnail}
-            width={200}
-            style={{ float: "left", margin: "0.5em" }}
-          ></img>
-          <h4>{video.meta.title}</h4>
-        </a>
-        {video.meta.viewCount} views
-        <br />
-        published {new Date(video.meta.published * 1000).toLocaleDateString()}
-        <br />
-        Length: {formatDuration(video.meta.lengthSeconds)}
-        <br />
-        Sponsor duration: {formatDuration(video.durationSponsor)} (
-        <b>{video.percentSponsor.toFixed(0)}%</b>)
-      </div>
-    );
-  }
-);
+// const VideoMetaDisplay: React.FC<{ video: SponsorInfo }> = observer(
+//   ({ video }) => {
+//     return (
+//       <div>
+//         <a href={`https://youtube.com/watch?v=${video.meta.videoID}`}>
+//           <img
+//             src={video.meta.maxresdefault_thumbnail}
+//             width={200}
+//             style={{ float: "left", margin: "0.5em" }}
+//           ></img>
+//           <h4>{video.meta.title}</h4>
+//         </a>
+//         {video.meta.viewCount} views
+//         <br />
+//         published {new Date(video.meta.published * 1000).toLocaleDateString()}
+//         <br />
+//         Length: {formatDuration(video.meta.lengthSeconds)}
+//         <br />
+//         Sponsor duration: {formatDuration(video.durationSponsor)} (
+//         <b>{video.percentSponsor.toFixed(0)}%</b>)
+//       </div>
+//     );
+//   }
+// );
 
 @observer
 export class UI extends React.Component {
@@ -135,16 +138,16 @@ export class UI extends React.Component {
   @observable
   data:
     | { state: "noinput" }
-    | { state: "loading"; author: string }
-    | { state: "loaded"; author: string; segs: SponsorInfo[] } = {
+    | { state: "loading"; tag: string }
+    | { state: "loaded"; tag: string; segs: Note[] } = {
     state: "noinput",
   };
   @observable
   stats: SqliteStats | null = null;
   @observable
   dbConfig: { lastUpdated: number } | null = null;
-  @observable
-  focussedVideo: SponsorInfo | null = null;
+  // @observable
+  // focussedVideo: SponsorInfo | null = null;
   @observable searchInput: string = "";
 
   constructor(p: {}) {
@@ -173,77 +176,87 @@ export class UI extends React.Component {
       this.initState = `Error connecting to database: ${e}`;
       return;
     }
-    const initialAuthor = new URLSearchParams(location.search).get("uploader");
-    if (initialAuthor) this.setAuthor(initialAuthor);
+    const initialTag = new URLSearchParams(location.search).get("tag");
+    if (initialTag) this.setTag(initialTag);
     this.initState = "";
   }
-  async setAuthor(search: string) {
+  async setTag(search: string) {
+    console.log("SETTING TAG: " + search);
     this.searchInput = search;
-    this.focussedVideo = null;
+    // this.focussedVideo = null;
     if (this.db) {
       this.data = {
         state: "loading",
-        author: search,
+        tag: search,
       };
       this.data = {
         state: "loaded",
-        author: search,
-        segs: await getForAuthor(this.db, search),
+        tag: search,
+        segs: await notesSearch(this.db, search),
       };
       console.log("data", this.data);
       {
         const searchParams = new URLSearchParams(location.search);
-        searchParams.set("uploader", search);
+        searchParams.set("tag", search);
         window.history.replaceState(null, document.title, "?" + searchParams);
       }
     }
   }
-  async authorsSearch(search: string) {
+  async tagsSearch(tag: string) {
     if (this.db) {
-      return await authorsSearch(this.db, search);
+      return await tagsSearch(this.db, tag);
     }
     return [];
   }
-  authorsSearchDebounce = debounce(this.authorsSearch.bind(this), 250, {
+  tagsSearchDebounce = debounce(this.tagsSearch.bind(this), 250, {
     leading: true,
   });
-  @action
-  setFocussed = (e: SponsorInfo) => (this.focussedVideo = e);
+  // @action
+  // setFocussed = (e: SponsorInfo) => (this.focussedVideo = e);
+
+  ListOfNotes(notes:Note[]) {
+    const notesList = notes.map((note) =>
+      <li><a href = {note.path}>{note.path}</a></li>
+    );
+    return (
+      <ul>{notesList}</ul>
+    );
+  }
 
   render() {
     if (this.initState) return <div>{this.initState}</div>;
     return (
       <div>
         <div>
-          Search for YouTuber:{" "}
-          <AsyncSelect<{ name: string }>
+          Search for Tag:{" "}
+          <AsyncSelect<{tag : string}>
             cacheOptions
             inputValue={this.searchInput}
-            onInputChange={(e) => (this.searchInput = e)}
-            loadOptions={this.authorsSearchDebounce}
-            getOptionLabel={(e) => e.name}
-            getOptionValue={(e) => e.name}
-            onChange={(e) => e && this.setAuthor(e.name)}
+            onInputChange={(e) => (this.searchInput = e, console.log("searchInput changed to: ", this.searchInput))}
+            loadOptions={this.tagsSearchDebounce}
+            getOptionLabel={(e) => e.tag}
+            getOptionValue={(e) => e.tag}
+            onChange={(e) => e && this.setTag(e.tag)}
           />
         </div>
         {this.data.state === "noinput" ? (
           <></>
         ) : this.data.state === "loading" ? (
-          <div>Loading videos for author "{this.data.author}"</div>
+          <div>Loading notes for tag "{this.data.tag}"</div>
         ) : (
           <div>
             <p>
-              Found {this.data.segs.length} videos with sponsorships from{" "}
-              {this.data.author}
+              Found {this.data.segs.length} notes with tag {" "}
+              {this.data.tag}
             </p>{" "}
-            <SponsorPlot data={this.data.segs} onHover={this.setFocussed} />
+              {this.ListOfNotes(this.data.segs)}
           </div>
         )}
-        {this.focussedVideo && (
+        {/* {this.focussedVideo && (
           <>
             Selected video: <VideoMetaDisplay video={this.focussedVideo} />
           </>
-        )}
+        )} */}
         <footer style={{ marginTop: "5em", color: "gray" }}>
           <div>
             {this.stats ? (
@@ -256,7 +269,7 @@ export class UI extends React.Component {
             )}{" "}
           </div>
           <div>
-            Source Code:{" "}
+            Adapted from:{" "}
             <a href="https://github.com/phiresky/youtube-sponsorship-stats/">
               https://github.com/phiresky/youtube-sponsorship-stats/
             </a>
